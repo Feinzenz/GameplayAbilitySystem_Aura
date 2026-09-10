@@ -17,9 +17,22 @@ public:
 	void SetIsBlockedHit(bool bInIsBlockedHit) {bIsBlockedHit = bInIsBlockedHit;}
 	
 	/** Returns the actual struct used for serialization, subclasses msot override this */
-	virtual UScriptStruct* GetStruct() const
+	virtual UScriptStruct* GetScriptStruct() const
 	{
-		return FGameplayEffectContext::StaticStruct();
+		return StaticStruct();
+	}
+	
+	/** Creates a copy of this context, used to duplicate for later modifications */
+	virtual FAuraGameplayEffectContext* Duplicate() const
+	{
+		FAuraGameplayEffectContext* NewContext = new FAuraGameplayEffectContext();
+		*NewContext = *this;
+		if (GetHitResult())
+		{
+			// Does a deep copy of the hit result
+			NewContext->AddHitResult(*GetHitResult(), true);
+		}
+		return NewContext;
 	}
 	
 	/** Custom serialization, subclasses must override this */
@@ -33,4 +46,14 @@ protected:
 	UPROPERTY()
 	bool bIsCriticalHit = false;
 	
+};
+
+template<>
+struct TStructOpsTypeTraits<FAuraGameplayEffectContext> : TStructOpsTypeTraitsBase2<FAuraGameplayEffectContext>
+{
+	enum
+	{
+		WithNetSerializer = true,
+		WithCopy = true
+	};
 };
