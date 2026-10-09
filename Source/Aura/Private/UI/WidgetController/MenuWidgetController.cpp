@@ -19,8 +19,7 @@ void UMenuWidgetController::BindCallbacksToDependencies()
 		);
 	}
 	
-	AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
-	AuraPlayerState->OnAttributePointsChangedDelegate.AddLambda([this](int32 Points)
+	GetAuraPS()->OnAttributePointsChangedDelegate.AddLambda([this](int32 Points)
 	{
 		AttributePointsChangedDelegate.Broadcast(Points);
 	});
@@ -32,18 +31,15 @@ void UMenuWidgetController::BindCallbacksToDependencies()
 
 void UMenuWidgetController::BroadcastInitialValues()
 {
-	UAuraAttributeSet* AS = Cast<UAuraAttributeSet>(AttributeSet);
-	
 	check(AttributeInfo)
 
-	for (auto& Pair : AS->TagsToAttributes)
+	for (auto& Pair : GetAuraAS()->TagsToAttributes)
 	{
 		BroadcastAttributeInfo(Pair.Key, Pair.Value());
 	}
 	
-	AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
-	AttributePointsChangedDelegate.Broadcast(AuraPlayerState->GetAttributePoints());
-	SpellPointsChangedDelegate.Broadcast(AuraPlayerState->GetSpellPoints());
+	AttributePointsChangedDelegate.Broadcast(GetAuraPS()->GetAttributePoints());
+	SpellPointsChangedDelegate.Broadcast(GetAuraPS()->GetSpellPoints());
 }
 
 void UMenuWidgetController::UpgradeAttribute(const FGameplayTag& AttributeTag)
