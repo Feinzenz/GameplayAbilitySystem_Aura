@@ -21,7 +21,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CauseDamage(AActor* TargetActor);
 	
-	FDamageEffectParams MakeDamageEffectParams(AActor* TargetActor = nullptr) const;
+	UFUNCTION(BlueprintPure)
+	FDamageEffectParams MakeDamageEffectParamsFromClassDefaults(AActor* TargetActor = nullptr) const;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -44,6 +45,15 @@ protected:
 		
 	UPROPERTY(EditDefaultsOnly, Category = "Damage")
 	float DebuffDuration = 5.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	float DeathImpulseMagnitude = 1000.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	float KnockbackForceMagnitude = 1000.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	float KnockbackChance = 0.f;
 	
 	UFUNCTION(BlueprintPure)
 	FTaggedMontage GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages) const;
