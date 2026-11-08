@@ -1,10 +1,11 @@
-// Copyright Vinzenz Landl
+ // Copyright Vinzenz Landl
 
 
 #include "AbilitySystem/AbilityTask/TargetDataUnderMouse.h"
 #include "AbilitySystemComponent.h"
+#include "Aura/Aura.h"
 
-UTargetDataUnderMouse* UTargetDataUnderMouse::CreateTargetDataUnderMouse(UGameplayAbility* OwningAbility)
+ UTargetDataUnderMouse* UTargetDataUnderMouse::CreateTargetDataUnderMouse(UGameplayAbility* OwningAbility)
 {
 	UTargetDataUnderMouse* MyObj = NewAbilityTask<UTargetDataUnderMouse>(OwningAbility);
 	return MyObj;
@@ -28,10 +29,7 @@ void UTargetDataUnderMouse::Activate()
 		{
 			SetWaitingOnRemotePlayerData();
 		}
-		
 	}
-	
-
 }
 
 void UTargetDataUnderMouse::SendMouseCursorData()
@@ -40,7 +38,7 @@ void UTargetDataUnderMouse::SendMouseCursorData()
 	
 	FHitResult CursorHit;
 	APlayerController* PC = Ability->GetCurrentActorInfo()->PlayerController.Get();
-	PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+	PC->GetHitResultUnderCursor(ECC_Target, false, CursorHit);
 	
 	FGameplayAbilityTargetDataHandle DataHandle;
 	FGameplayAbilityTargetData_SingleTargetHit* Data = new FGameplayAbilityTargetData_SingleTargetHit();
