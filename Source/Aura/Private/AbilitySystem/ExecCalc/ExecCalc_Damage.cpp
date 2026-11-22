@@ -9,6 +9,7 @@
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/CharacterClassInfo.h"
 #include "Interaction/CombatInterface.h"
+#include "Kismet/GameplayStatics.h"
 
 struct AuraDamageStatics
 {
@@ -133,6 +134,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	}
 	
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
+	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
 	
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
@@ -154,14 +156,44 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		checkf(TagsToCaptureDefs.Contains(ResistanceTag), TEXT("TagsToCaptureDefs doesnt contain tag: [%s] in ExecCalc_Damage"), *ResistanceTag.ToString());
 		const FGameplayEffectAttributeCaptureDefinition CaptureDef = TagsToCaptureDefs[ResistanceTag];
 		
-		float DamageTypeValue = Spec.GetSetByCallerMagnitude(Pair.Key, false);	
+		float DamageTypeValue = Spec.GetSetByCallerMagnitude(Pair.Key, false);
+		if (DamageTypeValue <= 0.f)
+		{
+			continue;
+		}
 		
 		float Resistance = 0.f;
 		ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(CaptureDef, EvaluationParameters, Resistance);
 		Resistance = FMath::Clamp(Resistance , 0.f, 100.f);
 		
 		DamageTypeValue *= (100.f - Resistance)/100.f;
-
+		
+		if (UAuraAbilitySystemLibrary::IsRadialDamage(EffectContextHandle))
+		{
+			//1. override TakeDamage in AuraCharacterBase
+			//2. create delegate OnDamageDelegate, broadcast damage received in TakeDamage
+			//3. Bind Lambda to OnDamageDelegate on the victim here
+			//4. Call UGameplayStatics::applyRadialDamageWIthFalloff to cause damage (this will result in TakeDamage being called on the victim, which will then broadcast OnDamageDelegate)
+			// 5. In Lambda, set DamageTypeValue to the damage received from the broadcast
+			if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(TargetAvatar))
+			{
+				CombatInterface->GetOnDamageSignature().AddLambda([&](float DamageAmount)
+				{
+					DamageTypeValue = DamageAmount;
+				});
+			}
+			UGameplayStatics::ApplyRadialDamageWithFalloff(TargetAvatar, 
+				DamageTypeValue, 
+				0.f, 
+				UAuraAbilitySystemLibrary::GetRadialDamageOrigin(EffectContextHandle), 
+				UAuraAbilitySystemLibrary::GetRadialDamageInnerRadius(EffectContextHandle), 
+				UAuraAbilitySystemLibrary::GetRadialDamageOuterRadius(EffectContextHandle),
+				1.f,
+				UDamageType::StaticClass(),
+				TArray<AActor*>(),
+				SourceAvatar,
+				nullptr);
+		}
 		Damage += DamageTypeValue;
 	}
 
@@ -173,7 +205,6 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	const bool bBlocked = FMath::RandRange(1, 100) < TargetBlockChance;
 	Damage = bBlocked ? Damage/2.f : Damage;
 	
-	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
 	UAuraAbilitySystemLibrary::SetIsBlockedHit(EffectContextHandle, bBlocked);
 	
 	float TargetArmor = 0.f;
@@ -222,6 +253,14 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	
 	//Double Damage plus damagebonus
 	Damage = bCriticalHit ? Damage*2.f + SourceCriticalHitDamage : Damage;	
+	
+	
+	//Passive Effect Halo of protection damage reduction
+	if (TargetTags->HasTagExact(Tags.Abilities_Passive_HaloOfProtection))
+	{
+		Damage *= 0.8f;
+	}
+	
 	
 	const FGameplayModifierEvaluatedData EvaluatedData(UAuraAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Damage);
 	OutExecutionOutput.AddOutputModifier(EvaluatedData);

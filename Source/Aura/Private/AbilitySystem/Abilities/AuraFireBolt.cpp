@@ -64,7 +64,6 @@ FString UAuraFireBolt::GetDescription(int32 Level)
 			ScaledDamage
 			);
 	}
-	
 }
 
 FString UAuraFireBolt::GetNextLevelDescription(int32 Level)

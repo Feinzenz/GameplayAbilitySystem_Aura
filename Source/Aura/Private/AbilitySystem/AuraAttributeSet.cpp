@@ -193,6 +193,29 @@ void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
 			Debuff(Props);
 		}
 	}
+	if (Props.SourceASC->GetOwnedGameplayTags().HasTagExact(FAuraGameplayTags::Get().Abilities_Passive_LifeSiphon))
+	{
+		const float LifeSiphoned = LocalIncomingDamage * 1.f;
+		
+		FGameplayEffectContextHandle EffectContext = Props.SourceASC->MakeEffectContext();
+		EffectContext.AddSourceObject(Props.SourceAvatarActor);
+		
+		UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetTransientPackage());
+		Effect->DurationPolicy = EGameplayEffectDurationType::Instant;
+		
+		Effect->Modifiers.Add(FGameplayModifierInfo());
+		FGameplayModifierInfo& ModifierInfo = Effect->Modifiers[0];
+	
+		ModifierInfo.ModifierMagnitude = FScalableFloat(LifeSiphoned);
+		ModifierInfo.ModifierOp = EGameplayModOp::Additive;
+		ModifierInfo.Attribute = UAuraAttributeSet::GetHealthAttribute();
+		
+		FGameplayEffectSpec* MutableSpec = new FGameplayEffectSpec(Effect, EffectContext, 1.f);
+		if (MutableSpec)
+		{
+			Props.SourceASC->ApplyGameplayEffectSpecToSelf(*MutableSpec);	
+		}
+	}
 }
 
 void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
