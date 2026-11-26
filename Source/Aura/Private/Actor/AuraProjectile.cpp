@@ -36,10 +36,10 @@ AAuraProjectile::AAuraProjectile()
 void AAuraProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AAuraProjectile::OnSphereOverlap);
-	LoopingSoundComponent = UGameplayStatics::SpawnSoundAttached(LoopingSound, GetRootComponent());
 	SetLifeSpan(LifeSpan);
 	SetReplicateMovement(true);
+	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AAuraProjectile::OnSphereOverlap);
+	LoopingSoundComponent = UGameplayStatics::SpawnSoundAttached(LoopingSound, GetRootComponent());
 }
 
 void AAuraProjectile::OnHit()
@@ -68,18 +68,12 @@ void AAuraProjectile::Destroyed()
 void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                       UPrimitiveComponent* OtherOverlappedComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!IsValid(DamageEffectParams.SourceAbilitySystemComponent)) return;
-	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor();
-	if (!IsValid(OtherActor)) return;
-	if (!IsValid(SourceAvatarActor)) return;
-	if (SourceAvatarActor == OtherActor) return;
-	if (!UAuraAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor)) return;
+	if (!IsValidOverlap(OtherActor)) return;
 		
 	if (!bHit) OnHit();
-
+	
 	if (HasAuthority())
 	{
-
 		if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 		{
 			const FVector DeathImpulse = GetActorForwardVector() * DamageEffectParams.DeathImpulseMagnitude;
@@ -102,4 +96,15 @@ void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 	else bHit = true;
 }
 
+bool AAuraProjectile::IsValidOverlap(AActor* OtherActor)
+{
+	if (!IsValid(DamageEffectParams.SourceAbilitySystemComponent)) return false;
+	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor();
+	if (!IsValid(OtherActor)) return false;
+	if (!IsValid(SourceAvatarActor)) return false;
+	if (SourceAvatarActor == OtherActor) return false;
+	if (!UAuraAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor)) return false;
+	
+	return true;
+}
 
